@@ -6,6 +6,8 @@
 <title>טופס העברת בעלות למנוי פרטנר פרטי/עסקי</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -48,8 +50,10 @@ body {
   white-space: nowrap;
 }
 .btn-print  { background: var(--green); color: #fff; }
+.btn-pdf    { background: #1a56db; color: #fff; }
 .btn-clear  { background: #888; color: #fff; }
 .btn:hover  { opacity: .85; }
+.btn:disabled { opacity: .6; cursor: wait; }
 
 /* ─── A4 page ─── */
 .page {
@@ -471,7 +475,8 @@ input[type="radio"], input[type="checkbox"] {
 
 <!-- ═══════════════════════════ PRINT CONTROLS ═══════════════════════════ -->
 <div class="controls">
-  <button class="btn btn-print" onclick="window.print()">הדפס / שמור PDF</button>
+  <button class="btn btn-print" onclick="window.print()">הדפס</button>
+  <button class="btn btn-pdf" id="btn-download" onclick="downloadPDF()">הורד PDF</button>
   <button class="btn btn-clear" onclick="resetForm()">נקה טופס</button>
 </div>
 
@@ -1005,6 +1010,42 @@ function setDates() {
     const el = document.getElementById(id);
     if (el) el.value = t;
   });
+}
+
+/* ────────────────────── Download PDF ────────────────────── */
+async function downloadPDF() {
+  const btn = document.getElementById('btn-download');
+  btn.disabled = true;
+  btn.textContent = 'מייצר PDF…';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pages = document.querySelectorAll('.page');
+
+    for (let i = 0; i < pages.length; i++) {
+      const canvas = await html2canvas(pages[i], {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const pdfW = 210;
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH);
+    }
+
+    pdf.save('טופס-העברת-בעלות-פרטנר.pdf');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'הורד PDF';
+  }
 }
 
 /* ────────────────────── Init ────────────────────── */
